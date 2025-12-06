@@ -1,0 +1,7 @@
+assets/external/
+.web
+*.py[cod]
+.states
+__pycache__/
+*.db
+.venv
