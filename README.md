@@ -207,8 +207,6 @@ Este es un proyecto en desarrollo activo. Las sugerencias y mejoras son bienveni
 
 ## Contacto
 
-[Tu información de contacto]
-
 ---
 
 **Versión**: 1.0.0 (MVP)
