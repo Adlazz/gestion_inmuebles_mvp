@@ -57,10 +57,11 @@ Aplicación MVP (Minimum Viable Product) diseñada para inmobiliarias y administ
 
 ```
 gestion_inmuebles/
-├── inamobiliaria/
+├── inmobiliaria/
 │   ├── __init__.py
-│   ├── inamobiliaria.py    # Lógica principal y vistas
-│   └── models.py            # Modelos de base de datos
+│   ├── inmobiliaria.py      # Lógica principal y vistas
+│   └── models/
+│       └── __init__.py      # Modelos de base de datos
 ├── README.md
 └── requirements.txt         # Dependencias del proyecto
 ```

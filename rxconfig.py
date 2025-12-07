@@ -1,7 +1,7 @@
 import reflex as rx
 
 config = rx.Config(
-    app_name="inamobiliaria",
+    app_name="inmobiliaria",
     plugins=[
         rx.plugins.SitemapPlugin(),
         rx.plugins.TailwindV4Plugin(),
