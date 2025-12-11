@@ -1,46 +1,23 @@
-import reflex as rx
-from typing import Optional, List
-from sqlmodel import Field, Relationship
+from .propietario import Propietario
+from .inquilino import Inquilino
+from .inmueble import Inmueble
+from .contrato import Contrato
+from .pago import Pago
 
-# Aquí agrupamos todas las tablas para evitar errores de importación circular
+# Inyectar las clases en el namespace de cada módulo para resolver forward references
+import inmobiliaria.models.propietario as propietario_module
+import inmobiliaria.models.inmueble as inmueble_module
+import inmobiliaria.models.inquilino as inquilino_module
+import inmobiliaria.models.contrato as contrato_module
+import inmobiliaria.models.pago as pago_module
 
-class Propietario(rx.Model, table=True):
-    nombre: str
-    apellido: str
-    dni: str
-    email: str
-    inmuebles: List["Inmueble"] = Relationship(back_populates="propietario")
+propietario_module.Inmueble = Inmueble
+inmueble_module.Propietario = Propietario
+inmueble_module.Contrato = Contrato
+inquilino_module.Contrato = Contrato
+contrato_module.Inmueble = Inmueble
+contrato_module.Inquilino = Inquilino
+contrato_module.Pago = Pago
+pago_module.Contrato = Contrato
 
-class Inmueble(rx.Model, table=True):
-    calle: str
-    altura: str
-    barrio: str
-    localidad: str
-    cp: str
-    propietario_id: int = Field(foreign_key="propietario.id")
-    propietario: Optional[Propietario] = Relationship(back_populates="inmuebles")
-    contratos: List["Contrato"] = Relationship(back_populates="inmueble")
-
-class Inquilino(rx.Model, table=True):
-    nombre: str
-    apellido: str
-    dni: str
-    email: str
-    contratos: List["Contrato"] = Relationship(back_populates="inquilino")
-
-class Contrato(rx.Model, table=True):
-    fecha_inicio: str
-    fecha_fin: str
-    monto: float
-    inmueble_id: int = Field(foreign_key="inmueble.id")
-    inmueble: Optional[Inmueble] = Relationship(back_populates="contratos")
-    inquilino_id: int = Field(foreign_key="inquilino.id")
-    inquilino: Optional[Inquilino] = Relationship(back_populates="contratos")
-    pagos: List["Pago"] = Relationship(back_populates="contrato")
-
-class Pago(rx.Model, table=True):
-    fecha: str
-    periodo: str
-    monto: float
-    contrato_id: int = Field(foreign_key="contrato.id")
-    contrato: Optional[Contrato] = Relationship(back_populates="pagos")
+__all__ = ["Propietario", "Inquilino", "Inmueble", "Contrato", "Pago"]
