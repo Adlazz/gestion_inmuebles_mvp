@@ -1,6 +1,8 @@
 import reflex as rx
 from typing import List
-from sqlmodel import select, func
+import re
+from datetime import datetime
+from sqlmodel import select, func, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from .models import Propietario, Inmueble, Inquilino, Contrato, Pago
@@ -137,6 +139,107 @@ class State(rx.State):
     def set_pago_fecha(self, value: str):
         self.pago_fecha = value
 
+    # --- VALIDACIONES ---
+    def validar_dni(self, dni: str) -> bool:
+        """Valida formato de DNI (7-8 dígitos)"""
+        if not dni:
+            self.mensaje_error = "El DNI es obligatorio"
+            return False
+        if not re.match(r'^\d{7,8}$', dni):
+            self.mensaje_error = "El DNI debe tener 7 u 8 dígitos numéricos"
+            return False
+        return True
+
+    def validar_email(self, email: str) -> bool:
+        """Valida formato de email"""
+        if not email:
+            self.mensaje_error = "El email es obligatorio"
+            return False
+        patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(patron, email):
+            self.mensaje_error = "El formato del email no es válido"
+            return False
+        return True
+
+    def validar_monto(self, monto: str) -> bool:
+        """Valida que el monto sea un número positivo"""
+        if not monto:
+            self.mensaje_error = "El monto es obligatorio"
+            return False
+        try:
+            valor = float(monto)
+            if valor <= 0:
+                self.mensaje_error = "El monto debe ser mayor a 0"
+                return False
+            return True
+        except ValueError:
+            self.mensaje_error = "El monto debe ser un número válido"
+            return False
+
+    def validar_fechas_contrato(self, fecha_inicio: str, fecha_fin: str) -> bool:
+        """Valida que fecha_fin sea posterior a fecha_inicio"""
+        if not fecha_inicio or not fecha_fin:
+            self.mensaje_error = "Las fechas de inicio y fin son obligatorias"
+            return False
+        try:
+            inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d")
+            fin = datetime.strptime(fecha_fin, "%Y-%m-%d")
+            if fin <= inicio:
+                self.mensaje_error = "La fecha de fin debe ser posterior a la fecha de inicio"
+                return False
+            return True
+        except ValueError:
+            self.mensaje_error = "Formato de fecha inválido"
+            return False
+
+    def dni_duplicado(self, dni: str, tipo: str, id_actual: int = None) -> bool:
+        """Verifica si un DNI ya existe en propietarios o inquilinos"""
+        with rx.session() as session:
+            # Verificar en propietarios
+            if tipo == "propietario" or tipo == "ambos":
+                query = select(Propietario).where(Propietario.dni == dni)
+                if id_actual:
+                    query = query.where(Propietario.id != id_actual)
+                propietario = session.exec(query).first()
+                if propietario:
+                    self.mensaje_error = f"El DNI {dni} ya está registrado en un propietario"
+                    return True
+
+            # Verificar en inquilinos
+            if tipo == "inquilino" or tipo == "ambos":
+                query = select(Inquilino).where(Inquilino.dni == dni)
+                if id_actual:
+                    query = query.where(Inquilino.id != id_actual)
+                inquilino = session.exec(query).first()
+                if inquilino:
+                    self.mensaje_error = f"El DNI {dni} ya está registrado en un inquilino"
+                    return True
+        return False
+
+    def email_duplicado(self, email: str, tipo: str, id_actual: int = None) -> bool:
+        """Verifica si un email ya existe en propietarios o inquilinos"""
+        with rx.session() as session:
+            # Verificar en propietarios
+            if tipo == "propietario" or tipo == "ambos":
+                query = select(Propietario).where(Propietario.email == email)
+                if id_actual:
+                    query = query.where(Propietario.id != id_actual)
+                propietario = session.exec(query).first()
+                if propietario:
+                    self.mensaje_error = f"El email {email} ya está registrado en un propietario"
+                    return True
+
+            # Verificar en inquilinos
+            if tipo == "inquilino" or tipo == "ambos":
+                query = select(Inquilino).where(Inquilino.email == email)
+                if id_actual:
+                    query = query.where(Inquilino.id != id_actual)
+                inquilino = session.exec(query).first()
+                if inquilino:
+                    self.mensaje_error = f"El email {email} ya está registrado en un inquilino"
+                    return True
+        return False
+
     # --- CONTROL DE DIÁLOGOS Y MENSAJES ---
     def cerrar_mensaje_error(self):
         self.mensaje_error = ""
@@ -171,6 +274,24 @@ class State(rx.State):
 
     # --- GUARDAR ENTIDADES ---
     def guardar_propietario(self):
+        # Validaciones
+        if not self.form_prop_nombre or not self.form_prop_apellido:
+            self.mensaje_error = "El nombre y apellido son obligatorios"
+            return
+
+        if not self.validar_dni(self.form_prop_dni):
+            return
+
+        if not self.validar_email(self.form_prop_email):
+            return
+
+        # Verificar duplicados
+        id_actual = self.editando_propietario_id if self.editando_propietario_id else None
+        if self.dni_duplicado(self.form_prop_dni, "propietario", id_actual):
+            return
+        if self.email_duplicado(self.form_prop_email, "propietario", id_actual):
+            return
+
         with rx.session() as session:
             if self.editando_propietario_id:
                 # Editar propietario existente
@@ -232,8 +353,15 @@ class State(rx.State):
         return [f"{p.id} - {p.nombre} {p.apellido}" for p in self.lista_propietarios]
 
     def guardar_inmueble(self):
-        if not self.inm_propietario_select:
+        # Validaciones
+        if not self.inm_calle or not self.inm_altura:
+            self.mensaje_error = "La calle y altura son obligatorias"
             return
+
+        if not self.inm_propietario_select:
+            self.mensaje_error = "Debe seleccionar un propietario"
+            return
+
         id_dueno = int(self.inm_propietario_select.split(" - ")[0])
         with rx.session() as session:
             if self.editando_inmueble_id:
@@ -299,6 +427,24 @@ class State(rx.State):
         self.cerrar_dialog_eliminar()
 
     def guardar_inquilino(self):
+        # Validaciones
+        if not self.form_inq_nombre or not self.form_inq_apellido:
+            self.mensaje_error = "El nombre y apellido son obligatorios"
+            return
+
+        if not self.validar_dni(self.form_inq_dni):
+            return
+
+        if not self.validar_email(self.form_inq_email):
+            return
+
+        # Verificar duplicados
+        id_actual = self.editando_inquilino_id if self.editando_inquilino_id else None
+        if self.dni_duplicado(self.form_inq_dni, "inquilino", id_actual):
+            return
+        if self.email_duplicado(self.form_inq_email, "inquilino", id_actual):
+            return
+
         with rx.session() as session:
             if self.editando_inquilino_id:
                 # Editar inquilino existente
@@ -364,8 +510,17 @@ class State(rx.State):
         return [f"{i.id} - {i.nombre} {i.apellido}" for i in self.lista_inquilinos]
 
     def guardar_contrato(self):
+        # Validaciones
         if not self.con_inmueble_select or not self.con_inquilino_select:
+            self.mensaje_error = "Debe seleccionar un inmueble y un inquilino"
             return
+
+        if not self.validar_monto(self.con_monto):
+            return
+
+        if not self.validar_fechas_contrato(self.con_fecha_inicio, self.con_fecha_fin):
+            return
+
         id_inm = int(self.con_inmueble_select.split(" - ")[0])
         id_inq = int(self.con_inquilino_select.split(" - ")[0])
         with rx.session() as session:
@@ -436,8 +591,22 @@ class State(rx.State):
         return [f"{c.id} - {c.inmueble.calle} (Inq: {c.inquilino.apellido})" for c in self.lista_contratos]
 
     def guardar_pago(self):
+        # Validaciones
         if not self.pago_contrato_select:
+            self.mensaje_error = "Debe seleccionar un contrato"
             return
+
+        if not self.pago_periodo:
+            self.mensaje_error = "El periodo es obligatorio"
+            return
+
+        if not self.pago_fecha:
+            self.mensaje_error = "La fecha de pago es obligatoria"
+            return
+
+        if not self.validar_monto(self.pago_monto):
+            return
+
         id_con = int(self.pago_contrato_select.split(" - ")[0])
 
         with rx.session() as session:
