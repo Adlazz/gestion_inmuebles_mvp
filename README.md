@@ -60,7 +60,7 @@ gestion_inmuebles_mvp/
 ├── inmobiliaria/
 │   ├── __init__.py
 │   ├── inmobiliaria.py          # Punto de entrada y routing
-│   ├── state.py                 # Lógica de estado y eventos
+│   ├── state.py                 # Gestión de estado y eventos UI
 │   ├── models/                  # Modelos de base de datos
 │   │   ├── __init__.py
 │   │   ├── propietario.py
@@ -68,6 +68,14 @@ gestion_inmuebles_mvp/
 │   │   ├── inquilino.py
 │   │   ├── contrato.py
 │   │   └── pago.py
+│   ├── services/                # Capa de lógica de negocio
+│   │   ├── __init__.py
+│   │   ├── validaciones_service.py
+│   │   ├── propietario_service.py
+│   │   ├── inmueble_service.py
+│   │   ├── inquilino_service.py
+│   │   ├── contrato_service.py
+│   │   └── pago_service.py
 │   └── views/                   # Componentes de interfaz
 │       ├── __init__.py
 │       ├── dashboard.py         # Vista principal con métricas
@@ -78,17 +86,22 @@ gestion_inmuebles_mvp/
 │       └── pagos.py             # Vista registro de pagos
 ├── .gitignore
 ├── README.md
+├── MEJORAS.md
 ├── rxconfig.py                  # Configuración de Reflex
 └── requirements.txt
 ```
 
 ### Arquitectura
 
-El proyecto sigue una **arquitectura modular** con separación de responsabilidades:
+El proyecto sigue una **arquitectura en capas** con clara separación de responsabilidades:
 
-- **`inmobiliaria.py`**: Punto de entrada, definición de rutas y estructura de pestañas
-- **`state.py`**: Gestión centralizada del estado de la aplicación, lógica de negocio y operaciones de base de datos
+- **`inmobiliaria.py`**: Punto de entrada, definición de rutas y componentes globales (diálogos, mensajes)
+- **`state.py`**: Gestión de estado UI y coordinación entre vistas y services
 - **`models/`**: Modelos de datos SQLModel con relaciones definidas
+- **`services/`**: Capa de lógica de negocio y operaciones de base de datos
+  - Validaciones centralizadas
+  - Operaciones CRUD por entidad
+  - Verificación de constraints y relaciones
 - **`views/`**: Componentes de UI reutilizables y aislados por funcionalidad
 
 ## Modelos de Datos
@@ -199,38 +212,72 @@ El dashboard muestra en tiempo real:
 ## Estado Actual (MVP)
 
 ### Funcionalidades Implementadas ✓
-- CRUD básico (Create + Read) para todas las entidades
-- Dashboard con métricas en tiempo real
-- Relaciones entre entidades (propietario-inmueble, contrato-inmueble-inquilino)
-- Sistema de carga eager loading para optimizar consultas
-- Interfaz de usuario limpia y funcional
-- **Arquitectura modular refactorizada** con separación de responsabilidades
-- Setters explícitos configurados para compatibilidad con Reflex 0.9.0+
+
+#### CRUD Completo
+- ✅ **Crear** registros en todas las entidades
+- ✅ **Leer** y visualizar datos en tablas organizadas
+- ✅ **Editar** registros existentes con carga de datos en formularios
+- ✅ **Eliminar** con diálogo de confirmación y verificación de constraints
+
+#### Validaciones
+- ✅ Validación de formato DNI (7-8 dígitos)
+- ✅ Validación de formato email (patrón estándar)
+- ✅ Validación de montos (números positivos)
+- ✅ Validación de fechas (fecha_fin > fecha_inicio en contratos)
+- ✅ Prevención de DNI y email duplicados
+- ✅ Validación de campos obligatorios
+
+#### Gestión de Constraints
+- ✅ Verificación de relaciones antes de eliminar
+- ✅ Mensajes descriptivos de error
+- ✅ Protección de integridad referencial:
+  - Propietario con inmuebles
+  - Inmueble con contratos
+  - Inquilino con contratos
+  - Contrato con pagos
+
+#### Arquitectura
+- ✅ **Arquitectura en capas** (Models, Services, State, Views)
+- ✅ **Services layer** con lógica de negocio separada
+- ✅ Validaciones centralizadas en `ValidacionesService`
+- ✅ CRUD services por cada entidad
+- ✅ State enfocado solo en UI
+- ✅ Setters explícitos para Reflex 0.9.0+
+
+#### Interfaz de Usuario
+- ✅ Dashboard con métricas en tiempo real
+- ✅ Formularios con validación en línea
+- ✅ Tablas con botones de editar/eliminar
+- ✅ Diálogos de confirmación para eliminaciones
+- ✅ Mensajes de error contextuales
+- ✅ Eager loading para optimizar consultas
 
 ### Limitaciones Conocidas
-- No incluye funcionalidad de edición de registros
-- No permite eliminar registros
-- Sin validaciones de datos en formularios
-- Sin sistema de búsqueda o filtros
+- Sin sistema de búsqueda o filtros en tablas
 - Sin autenticación de usuarios
-- Sin manejo de errores visualizado al usuario
+- Sin paginación en listados extensos
+- Sin exportación de datos
+- Sin reportes generados
 
-### Mejoras Técnicas Recientes
-- ✅ Refactorización modular (models, state, views)
-- ✅ Compatibilidad con Python 3.11+
-- ✅ Preparado para Reflex 0.9.0 (setters explícitos)
-- ✅ Código reducido en 90% en archivo principal
+### Mejoras Técnicas Implementadas
+- ✅ Arquitectura modular completa (models, services, state, views)
+- ✅ Separación de responsabilidades (Services Pattern)
+- ✅ Validaciones robustas y reutilizables
+- ✅ Manejo de errores y constraints
+- ✅ Código mantenible y escalable
+- ✅ Compatibilidad con Python 3.11+ y Reflex 0.9.0+
 
 ## Roadmap de Mejoras
 
 Ver [MEJORAS.md](MEJORAS.md) para el plan detallado de mejoras sugeridas.
 
 Próximas funcionalidades planificadas:
-- Validación de formularios
-- Sistema de notificaciones
-- Filtros y búsqueda en tablas
-- Control de contratos vencidos
-- Reportes y exportación de datos
+- Sistema de búsqueda y filtros en tablas
+- Autenticación y roles de usuario
+- Reportes y exportación de datos (PDF, Excel)
+- Control de contratos vencidos con notificaciones
+- Paginación y ordenamiento en tablas
+- Gráficos y estadísticas avanzadas
 
 ## Contribuciones
 
@@ -244,5 +291,5 @@ Este es un proyecto en desarrollo activo. Las sugerencias y mejoras son bienveni
 
 ---
 
-**Versión**: 1.1.0 (MVP Refactorizado)
+**Versión**: 2.0.0 (CRUD Completo + Services Architecture)
 **Última actualización**: Diciembre 2025
