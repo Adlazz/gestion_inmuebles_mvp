@@ -4,19 +4,6 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ## Prioridad Alta (Críticas)
 
-### 1. Validación de Datos
-**Impacto**: Alto | **Esfuerzo**: Medio
-
-- Validar formato y unicidad de DNI
-- Validar formato de email
-- Validar montos (números positivos)
-- Validar fechas (fecha_fin > fecha_inicio en contratos)
-- Prevenir datos duplicados
-
-**Beneficio**: Integridad de datos, prevención de errores
-
----
-
 ### 2. Manejo de Errores y Feedback
 **Impacto**: Alto | **Esfuerzo**: Bajo
 
@@ -26,17 +13,6 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 - Indicadores de carga durante operaciones
 
 **Beneficio**: Mejor experiencia de usuario, debugging más fácil
-
----
-
-### 3. CRUD Completo
-**Impacto**: Alto | **Esfuerzo**: Medio
-
-**Faltante**:
-- **Update**: Editar propietarios, inmuebles, inquilinos, contratos
-- **Delete**: Eliminar registros (con confirmación)
-
-**Beneficio**: Funcionalidad completa, gestión real de datos
 
 ---
 

@@ -272,16 +272,10 @@ class State(rx.State):
     def opciones_propietarios(self) -> List[str]:
         return [f"{p.id} - {p.nombre} {p.apellido}" for p in self.lista_propietarios]
 
-    # --- INMUEBLES ---
     def guardar_inmueble(self):
-        """Crea o actualiza un inmueble"""
         # Validaciones
-        valido, error = ValidacionesService.validar_campos_obligatorios(
-            calle=self.inm_calle,
-            altura=self.inm_altura
-        )
-        if not valido:
-            self.mensaje_error = error
+        if not self.inm_calle or not self.inm_altura:
+            self.mensaje_error = "La calle y altura son obligatorias"
             return
 
         if not self.inm_propietario_select:
@@ -291,35 +285,41 @@ class State(rx.State):
         id_dueno = int(self.inm_propietario_select.split(" - ")[0])
         with rx.session() as session:
             if self.editando_inmueble_id:
-                InmuebleService.actualizar(
-                    session,
-                    self.editando_inmueble_id,
-                    self.inm_calle,
-                    self.inm_altura,
-                    self.inm_barrio,
-                    self.inm_localidad,
-                    self.inm_cp,
-                    id_dueno
-                )
+                # Editar inmueble existente
+                inm = session.get(Inmueble, self.editando_inmueble_id)
+                if inm:
+                    inm.calle = self.inm_calle
+                    inm.altura = self.inm_altura
+                    inm.barrio = self.inm_barrio
+                    inm.localidad = self.inm_localidad
+                    inm.cp = self.inm_cp
+                    inm.propietario_id = id_dueno
+                    session.add(inm)
+                    session.commit()
                 self.editando_inmueble_id = None
             else:
-                InmuebleService.crear(
-                    session,
-                    self.inm_calle,
-                    self.inm_altura,
-                    self.inm_barrio,
-                    self.inm_localidad,
-                    self.inm_cp,
-                    id_dueno
+                # Crear nuevo inmueble
+                nuevo = Inmueble(
+                    calle=self.inm_calle,
+                    altura=self.inm_altura,
+                    barrio=self.inm_barrio,
+                    localidad=self.inm_localidad,
+                    cp=self.inm_cp,
+                    propietario_id=id_dueno
                 )
-
+                session.add(nuevo)
+                session.commit()
+                session.refresh(nuevo)
         self.cargar_datos()
-        self._limpiar_form_inmueble()
+        self.inm_calle = ""
+        self.inm_altura = ""
+        self.inm_barrio = ""
+        self.inm_localidad = ""
+        self.inm_cp = ""
 
     def editar_inmueble(self, inm_id: int):
-        """Carga datos del inmueble en el formulario para edición"""
         with rx.session() as session:
-            inm = InmuebleService.obtener_por_id(session, inm_id)
+            inm = session.get(Inmueble, inm_id)
             if inm:
                 self.inm_calle = inm.calle
                 self.inm_altura = inm.altura
@@ -330,78 +330,73 @@ class State(rx.State):
                 self.editando_inmueble_id = inm_id
 
     def eliminar_inmueble(self, inm_id: int):
-        """Elimina un inmueble verificando constraints"""
         with rx.session() as session:
-            tiene_contratos, cantidad = InmuebleService.tiene_contratos(session, inm_id)
-            if tiene_contratos:
-                self.mensaje_error = f"No se puede eliminar el inmueble porque tiene {cantidad} contrato(s) asociado(s)"
-                return
-
-            try:
-                InmuebleService.eliminar(session, inm_id)
-            except IntegrityError:
-                self.mensaje_error = "Error al eliminar el inmueble debido a restricciones de base de datos"
-
+            inm = session.get(Inmueble, inm_id)
+            if inm:
+                # Verificar si tiene contratos asociados
+                contratos = session.exec(select(Contrato).where(Contrato.inmueble_id == inm_id)).all()
+                if contratos:
+                    self.mensaje_error = f"No se puede eliminar el inmueble porque tiene {len(contratos)} contrato(s) asociado(s). Elimine primero los contratos."
+                    return
+                try:
+                    session.delete(inm)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el inmueble debido a restricciones de base de datos."
         self.cargar_datos()
         self.cerrar_dialog_eliminar()
 
-    def _limpiar_form_inmueble(self):
-        """Limpia el formulario de inmueble"""
-        self.inm_calle = ""
-        self.inm_altura = ""
-        self.inm_barrio = ""
-        self.inm_localidad = ""
-        self.inm_cp = ""
-
-    # --- INQUILINOS ---
     def guardar_inquilino(self):
-        """Crea o actualiza un inquilino"""
-        valido, error = ValidacionesService.validar_campos_obligatorios(
-            nombre=self.form_inq_nombre, apellido=self.form_inq_apellido
-        )
-        if not valido:
-            self.mensaje_error = error
+        # Validaciones
+        if not self.form_inq_nombre or not self.form_inq_apellido:
+            self.mensaje_error = "El nombre y apellido son obligatorios"
             return
 
-        valido, error = ValidacionesService.validar_dni(self.form_inq_dni)
-        if not valido:
-            self.mensaje_error = error
+        if not self.validar_dni(self.form_inq_dni):
             return
 
-        valido, error = ValidacionesService.validar_email(self.form_inq_email)
-        if not valido:
-            self.mensaje_error = error
+        if not self.validar_email(self.form_inq_email):
+            return
+
+        # Verificar duplicados
+        id_actual = self.editando_inquilino_id if self.editando_inquilino_id else None
+        if self.dni_duplicado(self.form_inq_dni, "inquilino", id_actual):
+            return
+        if self.email_duplicado(self.form_inq_email, "inquilino", id_actual):
             return
 
         with rx.session() as session:
-            id_actual = self.editando_inquilino_id
-            if InquilinoService.buscar_por_dni(session, self.form_inq_dni, id_actual):
-                self.mensaje_error = f"El DNI {self.form_inq_dni} ya está registrado"
-                return
-            if InquilinoService.buscar_por_email(session, self.form_inq_email, id_actual):
-                self.mensaje_error = f"El email {self.form_inq_email} ya está registrado"
-                return
-
             if self.editando_inquilino_id:
-                InquilinoService.actualizar(
-                    session, self.editando_inquilino_id,
-                    self.form_inq_nombre, self.form_inq_apellido,
-                    self.form_inq_dni, self.form_inq_email
-                )
+                # Editar inquilino existente
+                inq = session.get(Inquilino, self.editando_inquilino_id)
+                if inq:
+                    inq.nombre = self.form_inq_nombre
+                    inq.apellido = self.form_inq_apellido
+                    inq.dni = self.form_inq_dni
+                    inq.email = self.form_inq_email
+                    session.add(inq)
+                    session.commit()
                 self.editando_inquilino_id = None
             else:
-                InquilinoService.crear(
-                    session, self.form_inq_nombre, self.form_inq_apellido,
-                    self.form_inq_dni, self.form_inq_email
+                # Crear nuevo inquilino
+                nuevo = Inquilino(
+                    nombre=self.form_inq_nombre,
+                    apellido=self.form_inq_apellido,
+                    dni=self.form_inq_dni,
+                    email=self.form_inq_email
                 )
-
+                session.add(nuevo)
+                session.commit()
+                session.refresh(nuevo)
         self.cargar_datos()
-        self._limpiar_form_inquilino()
+        self.form_inq_nombre = ""
+        self.form_inq_apellido = ""
+        self.form_inq_dni = ""
+        self.form_inq_email = ""
 
     def editar_inquilino(self, inq_id: int):
-        """Carga datos del inquilino en el formulario para edición"""
         with rx.session() as session:
-            inq = InquilinoService.obtener_por_id(session, inq_id)
+            inq = session.get(Inquilino, inq_id)
             if inq:
                 self.form_inq_nombre = inq.nombre
                 self.form_inq_apellido = inq.apellido
@@ -410,27 +405,21 @@ class State(rx.State):
                 self.editando_inquilino_id = inq_id
 
     def eliminar_inquilino(self, inq_id: int):
-        """Elimina un inquilino verificando constraints"""
         with rx.session() as session:
-            tiene_contratos, cantidad = InquilinoService.tiene_contratos(session, inq_id)
-            if tiene_contratos:
-                self.mensaje_error = f"No se puede eliminar el inquilino porque tiene {cantidad} contrato(s) asociado(s)"
-                return
-
-            try:
-                InquilinoService.eliminar(session, inq_id)
-            except IntegrityError:
-                self.mensaje_error = "Error al eliminar el inquilino debido a restricciones de base de datos"
-
+            inq = session.get(Inquilino, inq_id)
+            if inq:
+                # Verificar si tiene contratos asociados
+                contratos = session.exec(select(Contrato).where(Contrato.inquilino_id == inq_id)).all()
+                if contratos:
+                    self.mensaje_error = f"No se puede eliminar el inquilino porque tiene {len(contratos)} contrato(s) asociado(s). Elimine primero los contratos."
+                    return
+                try:
+                    session.delete(inq)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el inquilino debido a restricciones de base de datos."
         self.cargar_datos()
         self.cerrar_dialog_eliminar()
-
-    def _limpiar_form_inquilino(self):
-        """Limpia el formulario de inquilino"""
-        self.form_inq_nombre = ""
-        self.form_inq_apellido = ""
-        self.form_inq_dni = ""
-        self.form_inq_email = ""
 
     @rx.var
     def opciones_inmuebles_select(self) -> List[str]:
@@ -440,46 +429,57 @@ class State(rx.State):
     def opciones_inquilinos_select(self) -> List[str]:
         return [f"{i.id} - {i.nombre} {i.apellido}" for i in self.lista_inquilinos]
 
-    # --- CONTRATOS ---
     def guardar_contrato(self):
-        """Crea o actualiza un contrato"""
+        # Validaciones
         if not self.con_inmueble_select or not self.con_inquilino_select:
             self.mensaje_error = "Debe seleccionar un inmueble y un inquilino"
             return
 
-        valido, error = ValidacionesService.validar_monto(self.con_monto)
-        if not valido:
-            self.mensaje_error = error
+        if not self.validar_monto(self.con_monto):
             return
 
-        valido, error = ValidacionesService.validar_fechas_contrato(self.con_fecha_inicio, self.con_fecha_fin)
-        if not valido:
-            self.mensaje_error = error
+        if not self.validar_fechas_contrato(self.con_fecha_inicio, self.con_fecha_fin):
             return
 
         id_inm = int(self.con_inmueble_select.split(" - ")[0])
         id_inq = int(self.con_inquilino_select.split(" - ")[0])
-
         with rx.session() as session:
             if self.editando_contrato_id:
-                ContratoService.actualizar(
-                    session, self.editando_contrato_id, id_inm, id_inq,
-                    self.con_fecha_inicio, self.con_fecha_fin, float(self.con_monto)
-                )
+                # Editar contrato existente
+                con = session.get(Contrato, self.editando_contrato_id)
+                if con:
+                    con.inmueble_id = id_inm
+                    con.inquilino_id = id_inq
+                    con.fecha_inicio = self.con_fecha_inicio
+                    con.fecha_fin = self.con_fecha_fin
+                    con.monto = float(self.con_monto) if self.con_monto else 0.0
+                    session.add(con)
+                    session.commit()
                 self.editando_contrato_id = None
             else:
-                ContratoService.crear(
-                    session, id_inm, id_inq,
-                    self.con_fecha_inicio, self.con_fecha_fin, float(self.con_monto)
+                # Crear nuevo contrato
+                nuevo = Contrato(
+                    inmueble_id=id_inm,
+                    inquilino_id=id_inq,
+                    fecha_inicio=self.con_fecha_inicio,
+                    fecha_fin=self.con_fecha_fin,
+                    monto=float(self.con_monto) if self.con_monto else 0.0
                 )
-
+                session.add(nuevo)
+                session.commit()
+                session.refresh(nuevo)
         self.cargar_datos()
-        self._limpiar_form_contrato()
+        self.con_fecha_inicio = ""
+        self.con_fecha_fin = ""
+        self.con_monto = ""
 
     def editar_contrato(self, con_id: int):
-        """Carga datos del contrato en el formulario para edición"""
         with rx.session() as session:
-            con = ContratoService.obtener_por_id(session, con_id)
+            con = session.exec(
+                select(Contrato)
+                .where(Contrato.id == con_id)
+                .options(selectinload(Contrato.inmueble), selectinload(Contrato.inquilino))
+            ).first()
             if con:
                 self.con_inmueble_select = f"{con.inmueble_id} - {con.inmueble.calle} {con.inmueble.altura} ({con.inmueble.barrio})"
                 self.con_inquilino_select = f"{con.inquilino_id} - {con.inquilino.nombre} {con.inquilino.apellido}"
@@ -489,71 +489,81 @@ class State(rx.State):
                 self.editando_contrato_id = con_id
 
     def eliminar_contrato(self, con_id: int):
-        """Elimina un contrato verificando constraints"""
         with rx.session() as session:
-            tiene_pagos, cantidad = ContratoService.tiene_pagos(session, con_id)
-            if tiene_pagos:
-                self.mensaje_error = f"No se puede eliminar el contrato porque tiene {cantidad} pago(s) registrado(s)"
-                return
-
-            try:
-                ContratoService.eliminar(session, con_id)
-            except IntegrityError:
-                self.mensaje_error = "Error al eliminar el contrato debido a restricciones de base de datos"
-
+            con = session.get(Contrato, con_id)
+            if con:
+                # Verificar si tiene pagos asociados
+                pagos = session.exec(select(Pago).where(Pago.contrato_id == con_id)).all()
+                if pagos:
+                    self.mensaje_error = f"No se puede eliminar el contrato porque tiene {len(pagos)} pago(s) registrado(s). Elimine primero los pagos."
+                    return
+                try:
+                    session.delete(con)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el contrato debido a restricciones de base de datos."
         self.cargar_datos()
         self.cerrar_dialog_eliminar()
-
-    def _limpiar_form_contrato(self):
-        """Limpia el formulario de contrato"""
-        self.con_fecha_inicio = ""
-        self.con_fecha_fin = ""
-        self.con_monto = ""
 
     @rx.var
     def opciones_contratos_select(self) -> List[str]:
         """Muestra una lista legible de contratos para cobrar"""
         return [f"{c.id} - {c.inmueble.calle} (Inq: {c.inquilino.apellido})" for c in self.lista_contratos]
 
-    # --- PAGOS ---
     def guardar_pago(self):
-        """Crea o actualiza un pago"""
-        valido, error = ValidacionesService.validar_campos_obligatorios(
-            contrato=self.pago_contrato_select,
-            periodo=self.pago_periodo,
-            fecha=self.pago_fecha
-        )
-        if not valido:
-            self.mensaje_error = error
+        # Validaciones
+        if not self.pago_contrato_select:
+            self.mensaje_error = "Debe seleccionar un contrato"
             return
 
-        valido, error = ValidacionesService.validar_monto(self.pago_monto)
-        if not valido:
-            self.mensaje_error = error
+        if not self.pago_periodo:
+            self.mensaje_error = "El periodo es obligatorio"
+            return
+
+        if not self.pago_fecha:
+            self.mensaje_error = "La fecha de pago es obligatoria"
+            return
+
+        if not self.validar_monto(self.pago_monto):
             return
 
         id_con = int(self.pago_contrato_select.split(" - ")[0])
 
         with rx.session() as session:
             if self.editando_pago_id:
-                PagoService.actualizar(
-                    session, self.editando_pago_id, id_con,
-                    self.pago_periodo, self.pago_fecha, float(self.pago_monto)
-                )
+                # Editar pago existente
+                pago = session.get(Pago, self.editando_pago_id)
+                if pago:
+                    pago.contrato_id = id_con
+                    pago.periodo = self.pago_periodo
+                    pago.fecha = self.pago_fecha
+                    pago.monto = float(self.pago_monto) if self.pago_monto else 0.0
+                    session.add(pago)
+                    session.commit()
                 self.editando_pago_id = None
             else:
-                PagoService.crear(
-                    session, id_con,
-                    self.pago_periodo, self.pago_fecha, float(self.pago_monto)
+                # Crear nuevo pago
+                nuevo = Pago(
+                    contrato_id=id_con,
+                    periodo=self.pago_periodo,
+                    fecha=self.pago_fecha,
+                    monto=float(self.pago_monto) if self.pago_monto else 0.0
                 )
-
+                session.add(nuevo)
+                session.commit()
+                session.refresh(nuevo)
         self.cargar_datos()
-        self._limpiar_form_pago()
+        self.pago_periodo = ""
+        self.pago_fecha = ""
+        self.pago_monto = ""
 
     def editar_pago(self, pago_id: int):
-        """Carga datos del pago en el formulario para edición"""
         with rx.session() as session:
-            pago = PagoService.obtener_por_id(session, pago_id)
+            pago = session.exec(
+                select(Pago)
+                .where(Pago.id == pago_id)
+                .options(selectinload(Pago.contrato).selectinload(Contrato.inmueble), selectinload(Pago.contrato).selectinload(Contrato.inquilino))
+            ).first()
             if pago:
                 self.pago_contrato_select = f"{pago.contrato_id} - {pago.contrato.inmueble.calle} (Inq: {pago.contrato.inquilino.apellido})"
                 self.pago_periodo = pago.periodo
@@ -562,21 +572,16 @@ class State(rx.State):
                 self.editando_pago_id = pago_id
 
     def eliminar_pago(self, pago_id: int):
-        """Elimina un pago"""
         with rx.session() as session:
-            try:
-                PagoService.eliminar(session, pago_id)
-            except IntegrityError:
-                self.mensaje_error = "Error al eliminar el pago debido a restricciones de base de datos"
-
+            pago = session.get(Pago, pago_id)
+            if pago:
+                try:
+                    session.delete(pago)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el pago debido a restricciones de base de datos."
         self.cargar_datos()
         self.cerrar_dialog_eliminar()
-
-    def _limpiar_form_pago(self):
-        """Limpia el formulario de pago"""
-        self.pago_periodo = ""
-        self.pago_fecha = ""
-        self.pago_monto = ""
 
     def confirmar_eliminacion(self):
         """Ejecuta la eliminación según el tipo de entidad"""
