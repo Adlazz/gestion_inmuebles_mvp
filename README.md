@@ -50,21 +50,46 @@ Aplicación MVP (Minimum Viable Product) diseñada para inmobiliarias y administ
 
 - **Framework**: [Reflex](https://reflex.dev/) - Framework Python para aplicaciones web full-stack
 - **Base de Datos**: SQLModel (ORM sobre SQLAlchemy)
-- **Lenguaje**: Python 3.x
+- **Lenguaje**: Python 3.11+
 - **Frontend**: Componentes Reflex (React bajo el capó)
 
 ## Estructura del Proyecto
 
 ```
-gestion_inmuebles/
+gestion_inmuebles_mvp/
 ├── inmobiliaria/
 │   ├── __init__.py
-│   ├── inmobiliaria.py      # Lógica principal y vistas
-│   └── models/
-│       └── __init__.py      # Modelos de base de datos
+│   ├── inmobiliaria.py          # Punto de entrada y routing
+│   ├── state.py                 # Lógica de estado y eventos
+│   ├── models/                  # Modelos de base de datos
+│   │   ├── __init__.py
+│   │   ├── propietario.py
+│   │   ├── inmueble.py
+│   │   ├── inquilino.py
+│   │   ├── contrato.py
+│   │   └── pago.py
+│   └── views/                   # Componentes de interfaz
+│       ├── __init__.py
+│       ├── dashboard.py         # Vista principal con métricas
+│       ├── propietarios.py      # Vista gestión propietarios
+│       ├── inmuebles.py         # Vista gestión inmuebles
+│       ├── inquilinos.py        # Vista gestión inquilinos
+│       ├── contratos.py         # Vista gestión contratos
+│       └── pagos.py             # Vista registro de pagos
+├── .gitignore
 ├── README.md
-└── requirements.txt         # Dependencias del proyecto
+├── rxconfig.py                  # Configuración de Reflex
+└── requirements.txt
 ```
+
+### Arquitectura
+
+El proyecto sigue una **arquitectura modular** con separación de responsabilidades:
+
+- **`inmobiliaria.py`**: Punto de entrada, definición de rutas y estructura de pestañas
+- **`state.py`**: Gestión centralizada del estado de la aplicación, lógica de negocio y operaciones de base de datos
+- **`models/`**: Modelos de datos SQLModel con relaciones definidas
+- **`views/`**: Componentes de UI reutilizables y aislados por funcionalidad
 
 ## Modelos de Datos
 
@@ -109,7 +134,7 @@ gestion_inmuebles/
 ## Instalación
 
 ### Prerrequisitos
-- Python 3.8 o superior
+- Python 3.11 o superior (requerido para Reflex)
 - pip (gestor de paquetes de Python)
 
 ### Pasos
@@ -117,23 +142,25 @@ gestion_inmuebles/
 1. Clonar el repositorio:
 ```bash
 git clone <url-del-repositorio>
-cd gestion_inmuebles
+cd gestion_inmuebles_mvp
 ```
 
 2. Crear entorno virtual (recomendado):
 ```bash
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+source venv/Scripts/activate  # En Git Bash (Windows)
+# o en Linux/Mac: source venv/bin/activate
 ```
 
 3. Instalar dependencias:
 ```bash
-pip install reflex sqlmodel
+pip install -r requirements.txt
 ```
 
-4. Inicializar la base de datos:
+4. Inicializar y migrar la base de datos:
 ```bash
-reflex init
+reflex db init
+reflex db migrate
 ```
 
 ## Uso
@@ -177,6 +204,8 @@ El dashboard muestra en tiempo real:
 - Relaciones entre entidades (propietario-inmueble, contrato-inmueble-inquilino)
 - Sistema de carga eager loading para optimizar consultas
 - Interfaz de usuario limpia y funcional
+- **Arquitectura modular refactorizada** con separación de responsabilidades
+- Setters explícitos configurados para compatibilidad con Reflex 0.9.0+
 
 ### Limitaciones Conocidas
 - No incluye funcionalidad de edición de registros
@@ -185,6 +214,12 @@ El dashboard muestra en tiempo real:
 - Sin sistema de búsqueda o filtros
 - Sin autenticación de usuarios
 - Sin manejo de errores visualizado al usuario
+
+### Mejoras Técnicas Recientes
+- ✅ Refactorización modular (models, state, views)
+- ✅ Compatibilidad con Python 3.11+
+- ✅ Preparado para Reflex 0.9.0 (setters explícitos)
+- ✅ Código reducido en 90% en archivo principal
 
 ## Roadmap de Mejoras
 
@@ -210,5 +245,5 @@ Este es un proyecto en desarrollo activo. Las sugerencias y mejoras son bienveni
 
 ---
 
-**Versión**: 1.0.0 (MVP)
+**Versión**: 1.1.0 (MVP Refactorizado)
 **Última actualización**: Diciembre 2025
