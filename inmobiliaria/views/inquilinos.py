@@ -48,7 +48,7 @@ def vista_inquilinos():
                         rx.table.cell(
                             rx.flex(
                                 rx.button("Editar", on_click=lambda: State.editar_inquilino(i.id), size="1"),
-                                rx.button("Eliminar", on_click=lambda: State.eliminar_inquilino(i.id), size="1", color_scheme="red"),
+                                rx.button("Eliminar", on_click=lambda: State.abrir_dialog_eliminar("inquilino", i.id), size="1", color_scheme="red"),
                                 spacing="2"
                             )
                         )

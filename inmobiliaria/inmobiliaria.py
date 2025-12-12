@@ -9,9 +9,57 @@ from .views import (
     vista_pagos,
 )
 
+def dialog_confirmar_eliminacion() -> rx.Component:
+    """Diálogo de confirmación para eliminar registros"""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Confirmar eliminación"),
+            rx.dialog.description(
+                "¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer."
+            ),
+            rx.flex(
+                rx.dialog.close(
+                    rx.button("Cancelar", variant="soft", color_scheme="gray")
+                ),
+                rx.dialog.close(
+                    rx.button(
+                        "Eliminar",
+                        on_click=State.confirmar_eliminacion,
+                        color_scheme="red"
+                    )
+                ),
+                spacing="3",
+                justify="end"
+            )
+        ),
+        open=State.mostrar_dialog_eliminar,
+        on_open_change=State.cerrar_dialog_eliminar
+    )
+
+def mensaje_error() -> rx.Component:
+    """Componente para mostrar mensajes de error"""
+    return rx.cond(
+        State.mensaje_error != "",
+        rx.callout.root(
+            rx.flex(
+                rx.callout.icon(rx.icon("triangle-alert")),
+                rx.callout.text(State.mensaje_error),
+                rx.icon("x", on_click=State.cerrar_mensaje_error, cursor="pointer"),
+                spacing="2",
+                align="center",
+                width="100%"
+            ),
+            color_scheme="red",
+            role="alert",
+            margin_bottom="1em"
+        )
+    )
+
 def index() -> rx.Component:
     return rx.container(
         rx.heading("Sistema de Gestión Inmobiliaria", size="8", margin_bottom="1em"),
+        mensaje_error(),
+        dialog_confirmar_eliminacion(),
         rx.tabs.root(
             rx.tabs.list(
                 rx.tabs.trigger("Inicio", value="tab0"),

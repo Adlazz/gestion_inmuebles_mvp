@@ -226,7 +226,6 @@ El dashboard muestra en tiempo real:
 Ver [MEJORAS.md](MEJORAS.md) para el plan detallado de mejoras sugeridas.
 
 Próximas funcionalidades planificadas:
-- Edición y eliminación de registros
 - Validación de formularios
 - Sistema de notificaciones
 - Filtros y búsqueda en tablas

@@ -2,6 +2,7 @@ import reflex as rx
 from typing import List
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 from .models import Propietario, Inmueble, Inquilino, Contrato, Pago
 
 
@@ -59,6 +60,12 @@ class State(rx.State):
     editando_inquilino_id: int | None = None
     editando_contrato_id: int | None = None
     editando_pago_id: int | None = None
+
+    # --- VARIABLES PARA MENSAJES Y CONFIRMACIONES ---
+    mensaje_error: str = ""
+    mostrar_dialog_eliminar: bool = False
+    tipo_entidad_eliminar: str = ""
+    id_entidad_eliminar: int = 0
 
     # --- SETTERS EXPLÍCITOS ---
     def set_form_prop_nombre(self, value: str):
@@ -130,6 +137,20 @@ class State(rx.State):
     def set_pago_fecha(self, value: str):
         self.pago_fecha = value
 
+    # --- CONTROL DE DIÁLOGOS Y MENSAJES ---
+    def cerrar_mensaje_error(self):
+        self.mensaje_error = ""
+
+    def abrir_dialog_eliminar(self, tipo: str, id_entidad: int):
+        self.tipo_entidad_eliminar = tipo
+        self.id_entidad_eliminar = id_entidad
+        self.mostrar_dialog_eliminar = True
+
+    def cerrar_dialog_eliminar(self):
+        self.mostrar_dialog_eliminar = False
+        self.tipo_entidad_eliminar = ""
+        self.id_entidad_eliminar = 0
+
     # --- CARGA GENERAL ---
     def cargar_datos(self):
         with rx.session() as session:
@@ -193,9 +214,18 @@ class State(rx.State):
         with rx.session() as session:
             prop = session.get(Propietario, prop_id)
             if prop:
-                session.delete(prop)
-                session.commit()
+                # Verificar si tiene inmuebles asociados
+                inmuebles = session.exec(select(Inmueble).where(Inmueble.propietario_id == prop_id)).all()
+                if inmuebles:
+                    self.mensaje_error = f"No se puede eliminar el propietario porque tiene {len(inmuebles)} inmueble(s) asociado(s). Elimine primero los inmuebles."
+                    return
+                try:
+                    session.delete(prop)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el propietario debido a restricciones de base de datos."
         self.cargar_datos()
+        self.cerrar_dialog_eliminar()
 
     @rx.var
     def opciones_propietarios(self) -> List[str]:
@@ -255,9 +285,18 @@ class State(rx.State):
         with rx.session() as session:
             inm = session.get(Inmueble, inm_id)
             if inm:
-                session.delete(inm)
-                session.commit()
+                # Verificar si tiene contratos asociados
+                contratos = session.exec(select(Contrato).where(Contrato.inmueble_id == inm_id)).all()
+                if contratos:
+                    self.mensaje_error = f"No se puede eliminar el inmueble porque tiene {len(contratos)} contrato(s) asociado(s). Elimine primero los contratos."
+                    return
+                try:
+                    session.delete(inm)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el inmueble debido a restricciones de base de datos."
         self.cargar_datos()
+        self.cerrar_dialog_eliminar()
 
     def guardar_inquilino(self):
         with rx.session() as session:
@@ -303,9 +342,18 @@ class State(rx.State):
         with rx.session() as session:
             inq = session.get(Inquilino, inq_id)
             if inq:
-                session.delete(inq)
-                session.commit()
+                # Verificar si tiene contratos asociados
+                contratos = session.exec(select(Contrato).where(Contrato.inquilino_id == inq_id)).all()
+                if contratos:
+                    self.mensaje_error = f"No se puede eliminar el inquilino porque tiene {len(contratos)} contrato(s) asociado(s). Elimine primero los contratos."
+                    return
+                try:
+                    session.delete(inq)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el inquilino debido a restricciones de base de datos."
         self.cargar_datos()
+        self.cerrar_dialog_eliminar()
 
     @rx.var
     def opciones_inmuebles_select(self) -> List[str]:
@@ -369,9 +417,18 @@ class State(rx.State):
         with rx.session() as session:
             con = session.get(Contrato, con_id)
             if con:
-                session.delete(con)
-                session.commit()
+                # Verificar si tiene pagos asociados
+                pagos = session.exec(select(Pago).where(Pago.contrato_id == con_id)).all()
+                if pagos:
+                    self.mensaje_error = f"No se puede eliminar el contrato porque tiene {len(pagos)} pago(s) registrado(s). Elimine primero los pagos."
+                    return
+                try:
+                    session.delete(con)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el contrato debido a restricciones de base de datos."
         self.cargar_datos()
+        self.cerrar_dialog_eliminar()
 
     @rx.var
     def opciones_contratos_select(self) -> List[str]:
@@ -429,6 +486,23 @@ class State(rx.State):
         with rx.session() as session:
             pago = session.get(Pago, pago_id)
             if pago:
-                session.delete(pago)
-                session.commit()
+                try:
+                    session.delete(pago)
+                    session.commit()
+                except IntegrityError:
+                    self.mensaje_error = "Error: No se puede eliminar el pago debido a restricciones de base de datos."
         self.cargar_datos()
+        self.cerrar_dialog_eliminar()
+
+    def confirmar_eliminacion(self):
+        """Ejecuta la eliminación según el tipo de entidad"""
+        if self.tipo_entidad_eliminar == "propietario":
+            self.eliminar_propietario(self.id_entidad_eliminar)
+        elif self.tipo_entidad_eliminar == "inmueble":
+            self.eliminar_inmueble(self.id_entidad_eliminar)
+        elif self.tipo_entidad_eliminar == "inquilino":
+            self.eliminar_inquilino(self.id_entidad_eliminar)
+        elif self.tipo_entidad_eliminar == "contrato":
+            self.eliminar_contrato(self.id_entidad_eliminar)
+        elif self.tipo_entidad_eliminar == "pago":
+            self.eliminar_pago(self.id_entidad_eliminar)

@@ -55,7 +55,7 @@ def vista_contratos():
                         rx.table.cell(
                             rx.flex(
                                 rx.button("Editar", on_click=lambda: State.editar_contrato(c.id), size="1"),
-                                rx.button("Eliminar", on_click=lambda: State.eliminar_contrato(c.id), size="1", color_scheme="red"),
+                                rx.button("Eliminar", on_click=lambda: State.abrir_dialog_eliminar("contrato", c.id), size="1", color_scheme="red"),
                                 spacing="2"
                             )
                         )
