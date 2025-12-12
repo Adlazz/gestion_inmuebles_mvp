@@ -38,7 +38,8 @@ def vista_pagos():
                     rx.table.column_header_cell("Fecha"),
                     rx.table.column_header_cell("Periodo"),
                     rx.table.column_header_cell("Inquilino"),
-                    rx.table.column_header_cell("Monto")
+                    rx.table.column_header_cell("Monto"),
+                    rx.table.column_header_cell("Acciones")
                 )
             ),
             rx.table.body(
@@ -48,7 +49,14 @@ def vista_pagos():
                         rx.table.cell(p.fecha),
                         rx.table.cell(p.periodo),
                         rx.table.cell(p.contrato.inquilino.apellido),
-                        rx.table.cell("$" + p.monto.to_string())
+                        rx.table.cell("$" + p.monto.to_string()),
+                        rx.table.cell(
+                            rx.flex(
+                                rx.button("Editar", on_click=lambda: State.editar_pago(p.id), size="1"),
+                                rx.button("Eliminar", on_click=lambda: State.eliminar_pago(p.id), size="1", color_scheme="red"),
+                                spacing="2"
+                            )
+                        )
                     )
                 )
             )

@@ -35,7 +35,8 @@ def vista_propietarios():
             rx.table.header(
                 rx.table.row(
                     rx.table.column_header_cell("Nombre"),
-                    rx.table.column_header_cell("DNI")
+                    rx.table.column_header_cell("DNI"),
+                    rx.table.column_header_cell("Acciones")
                 )
             ),
             rx.table.body(
@@ -43,7 +44,14 @@ def vista_propietarios():
                     State.lista_propietarios,
                     lambda p: rx.table.row(
                         rx.table.cell(p.nombre + " " + p.apellido),
-                        rx.table.cell(p.dni)
+                        rx.table.cell(p.dni),
+                        rx.table.cell(
+                            rx.flex(
+                                rx.button("Editar", on_click=lambda: State.editar_propietario(p.id), size="1"),
+                                rx.button("Eliminar", on_click=lambda: State.eliminar_propietario(p.id), size="1", color_scheme="red"),
+                                spacing="2"
+                            )
+                        )
                     )
                 )
             )

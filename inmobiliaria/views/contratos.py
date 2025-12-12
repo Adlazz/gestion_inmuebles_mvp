@@ -41,7 +41,8 @@ def vista_contratos():
                 rx.table.row(
                     rx.table.column_header_cell("Inmueble"),
                     rx.table.column_header_cell("Inquilino"),
-                    rx.table.column_header_cell("Monto")
+                    rx.table.column_header_cell("Monto"),
+                    rx.table.column_header_cell("Acciones")
                 )
             ),
             rx.table.body(
@@ -50,7 +51,14 @@ def vista_contratos():
                     lambda c: rx.table.row(
                         rx.table.cell(c.inmueble.calle),
                         rx.table.cell(c.inquilino.apellido),
-                        rx.table.cell("$" + c.monto.to_string())
+                        rx.table.cell("$" + c.monto.to_string()),
+                        rx.table.cell(
+                            rx.flex(
+                                rx.button("Editar", on_click=lambda: State.editar_contrato(c.id), size="1"),
+                                rx.button("Eliminar", on_click=lambda: State.eliminar_contrato(c.id), size="1", color_scheme="red"),
+                                spacing="2"
+                            )
+                        )
                     )
                 )
             )

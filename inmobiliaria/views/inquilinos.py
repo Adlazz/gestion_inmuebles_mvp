@@ -35,7 +35,8 @@ def vista_inquilinos():
             rx.table.header(
                 rx.table.row(
                     rx.table.column_header_cell("Inquilino"),
-                    rx.table.column_header_cell("Email")
+                    rx.table.column_header_cell("Email"),
+                    rx.table.column_header_cell("Acciones")
                 )
             ),
             rx.table.body(
@@ -43,7 +44,14 @@ def vista_inquilinos():
                     State.lista_inquilinos,
                     lambda i: rx.table.row(
                         rx.table.cell(i.nombre + " " + i.apellido),
-                        rx.table.cell(i.email)
+                        rx.table.cell(i.email),
+                        rx.table.cell(
+                            rx.flex(
+                                rx.button("Editar", on_click=lambda: State.editar_inquilino(i.id), size="1"),
+                                rx.button("Eliminar", on_click=lambda: State.eliminar_inquilino(i.id), size="1", color_scheme="red"),
+                                spacing="2"
+                            )
+                        )
                     )
                 )
             )

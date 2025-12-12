@@ -45,7 +45,8 @@ def vista_inmuebles():
             rx.table.header(
                 rx.table.row(
                     rx.table.column_header_cell("Dirección"),
-                    rx.table.column_header_cell("Dueño")
+                    rx.table.column_header_cell("Dueño"),
+                    rx.table.column_header_cell("Acciones")
                 )
             ),
             rx.table.body(
@@ -53,7 +54,14 @@ def vista_inmuebles():
                     State.lista_inmuebles,
                     lambda i: rx.table.row(
                         rx.table.cell(i.calle + " " + i.altura),
-                        rx.table.cell(i.propietario.nombre + " " + i.propietario.apellido)
+                        rx.table.cell(i.propietario.nombre + " " + i.propietario.apellido),
+                        rx.table.cell(
+                            rx.flex(
+                                rx.button("Editar", on_click=lambda: State.editar_inmueble(i.id), size="1"),
+                                rx.button("Eliminar", on_click=lambda: State.eliminar_inmueble(i.id), size="1", color_scheme="red"),
+                                spacing="2"
+                            )
+                        )
                     )
                 )
             )
