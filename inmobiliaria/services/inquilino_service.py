@@ -102,3 +102,22 @@ class InquilinoService:
             select(Contrato).where(Contrato.inquilino_id == id)
         ).all()
         return len(contratos) > 0, len(contratos)
+
+    @staticmethod
+    def tiene_contratos_activos(session: Session, id: int) -> tuple[bool, int]:
+        """
+        Verifica si un inquilino tiene contratos activos.
+
+        Returns:
+            tuple[bool, int]: (tiene_contratos_activos, cantidad)
+        """
+        from datetime import datetime
+
+        contratos = session.exec(
+            select(Contrato).where(Contrato.inquilino_id == id)
+        ).all()
+
+        hoy = datetime.now().date().isoformat()
+        contratos_activos = [c for c in contratos if c.fecha_inicio <= hoy <= c.fecha_fin]
+
+        return len(contratos_activos) > 0, len(contratos_activos)

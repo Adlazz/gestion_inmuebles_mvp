@@ -285,10 +285,25 @@ class State(rx.State):
         try:
             self.cargando = True
             with rx.session() as session:
-                # Verificar si tiene inmuebles asociados
+                # Primero verificar si tiene contratos activos
+                tiene_contratos_activos, cantidad_contratos, inmuebles_con_contratos = \
+                    PropietarioService.tiene_inmuebles_con_contratos_activos(session, prop_id)
+
+                if tiene_contratos_activos:
+                    direcciones = ", ".join([f"{inm.calle} {inm.altura}" for inm in inmuebles_con_contratos])
+                    self.mostrar_error(
+                        f"No se puede eliminar el propietario porque tiene {cantidad_contratos} contrato(s) "
+                        f"activo(s) en los siguientes inmuebles: {direcciones}"
+                    )
+                    return
+
+                # Si no tiene contratos activos, verificar si tiene inmuebles
                 tiene_inmuebles, cantidad = PropietarioService.tiene_inmuebles(session, prop_id)
                 if tiene_inmuebles:
-                    self.mostrar_error(f"No se puede eliminar el propietario porque tiene {cantidad} inmueble(s) asociado(s)")
+                    self.mostrar_error(
+                        f"No se puede eliminar el propietario porque tiene {cantidad} inmueble(s) asociado(s). "
+                        f"Elimine primero los inmuebles o sus contratos vencidos."
+                    )
                     return
 
                 PropietarioService.eliminar(session, prop_id)
@@ -391,9 +406,22 @@ class State(rx.State):
         try:
             self.cargando = True
             with rx.session() as session:
+                # Verificar primero si tiene contratos activos
+                tiene_activos, cantidad_activos = InmuebleService.tiene_contratos_activos(session, inm_id)
+                if tiene_activos:
+                    self.mostrar_error(
+                        f"No se puede eliminar el inmueble porque tiene {cantidad_activos} contrato(s) activo(s). "
+                        f"Espere a que los contratos finalicen o elimine primero los contratos."
+                    )
+                    return
+
+                # Si no tiene activos, verificar si tiene contratos vencidos
                 tiene_contratos, cantidad = InmuebleService.tiene_contratos(session, inm_id)
                 if tiene_contratos:
-                    self.mostrar_error(f"No se puede eliminar el inmueble porque tiene {cantidad} contrato(s) asociado(s)")
+                    self.mostrar_error(
+                        f"No se puede eliminar el inmueble porque tiene {cantidad} contrato(s) asociado(s). "
+                        f"Elimine primero todos los contratos del inmueble."
+                    )
                     return
 
                 InmuebleService.eliminar(session, inm_id)
@@ -492,9 +520,22 @@ class State(rx.State):
         try:
             self.cargando = True
             with rx.session() as session:
+                # Verificar primero si tiene contratos activos
+                tiene_activos, cantidad_activos = InquilinoService.tiene_contratos_activos(session, inq_id)
+                if tiene_activos:
+                    self.mostrar_error(
+                        f"No se puede eliminar el inquilino porque tiene {cantidad_activos} contrato(s) activo(s). "
+                        f"Espere a que los contratos finalicen o elimine primero los contratos."
+                    )
+                    return
+
+                # Si no tiene activos, verificar si tiene contratos vencidos
                 tiene_contratos, cantidad = InquilinoService.tiene_contratos(session, inq_id)
                 if tiene_contratos:
-                    self.mostrar_error(f"No se puede eliminar el inquilino porque tiene {cantidad} contrato(s) asociado(s)")
+                    self.mostrar_error(
+                        f"No se puede eliminar el inquilino porque tiene {cantidad} contrato(s) asociado(s). "
+                        f"Elimine primero todos los contratos del inquilino."
+                    )
                     return
 
                 InquilinoService.eliminar(session, inq_id)
@@ -657,22 +698,41 @@ class State(rx.State):
                 return
 
             id_con = int(self.pago_contrato_select.split(" - ")[0])
+            monto_pago = float(self.pago_monto)
 
             with rx.session() as session:
+                # Obtener el contrato para verificar coherencia de monto
+                contrato = ContratoService.obtener_por_id(session, id_con)
+                if not contrato:
+                    self.mostrar_error("El contrato seleccionado no existe")
+                    return
+
+                # Verificar coherencia del monto (permitir diferencias menores por redondeo)
+                diferencia = abs(contrato.monto - monto_pago)
+                porcentaje_diferencia = (diferencia / contrato.monto) * 100 if contrato.monto > 0 else 0
+
+                # Si la diferencia es mayor al 5%, mostrar advertencia pero permitir guardar
+                if porcentaje_diferencia > 5:
+                    # Nota: En un sistema más avanzado, podrías pedir confirmación al usuario
+                    # Por ahora, mostraremos un mensaje en el éxito indicando la diferencia
+                    mensaje_advertencia = f" (⚠️ El monto pagado ${monto_pago:.2f} difiere del monto del contrato ${contrato.monto:.2f})"
+                else:
+                    mensaje_advertencia = ""
+
                 es_edicion = self.editando_pago_id is not None
                 if es_edicion:
                     PagoService.actualizar(
                         session, self.editando_pago_id, id_con,
-                        self.pago_periodo, self.pago_fecha, float(self.pago_monto)
+                        self.pago_periodo, self.pago_fecha, monto_pago
                     )
                     self.editando_pago_id = None
-                    self.mostrar_exito("Pago actualizado exitosamente")
+                    self.mostrar_exito(f"Pago actualizado exitosamente{mensaje_advertencia}")
                 else:
                     PagoService.crear(
                         session, id_con,
-                        self.pago_periodo, self.pago_fecha, float(self.pago_monto)
+                        self.pago_periodo, self.pago_fecha, monto_pago
                     )
-                    self.mostrar_exito("Pago registrado exitosamente")
+                    self.mostrar_exito(f"Pago registrado exitosamente{mensaje_advertencia}")
 
             self.cargar_datos()
             self._limpiar_form_pago()

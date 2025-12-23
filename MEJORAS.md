@@ -4,22 +4,9 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ## Prioridad Alta (Críticas)
 
-### 2. Manejo de Errores y Feedback
-**Impacto**: Alto | **Esfuerzo**: Bajo
-
-- Implementar try-catch en operaciones de base de datos
-- Agregar notificaciones/toasts de éxito/error
-- Mensajes claros cuando fallan operaciones
-- Indicadores de carga durante operaciones
-
-**Beneficio**: Mejor experiencia de usuario, debugging más fácil
-
----
-
-### 4. Reglas de Negocio
+### 1. Reglas de Negocio
 **Impacto**: Alto | **Esfuerzo**: Medio
 
-- Validar que un inmueble no tenga contratos solapados
 - Marcar contratos como "activos" o "vencidos" según fecha
 - Verificar coherencia entre monto de contrato y pago
 - Prevenir eliminación de propietarios con inmuebles activos
@@ -28,7 +15,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-### 6. Búsqueda y Filtros
+### 2. Búsqueda y Filtros
 **Impacto**: Medio | **Esfuerzo**: Medio
 
 - Buscador en tablas de propietarios/inquilinos
@@ -41,7 +28,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-### 7. Mejoras en Dashboard
+### 3. Mejoras en Dashboard
 **Impacto**: Medio | **Esfuerzo**: Medio
 
 **Agregar**:
@@ -55,7 +42,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-### 8. Optimización de Performance
+### 4. Optimización de Performance
 **Impacto**: Medio | **Esfuerzo**: Bajo-Medio
 
 - Implementar paginación en tablas
@@ -69,7 +56,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ## Prioridad Baja (Deseables)
 
-### 9. Sistema de Autenticación
+### 5. Sistema de Autenticación
 **Impacto**: Bajo (MVP) / Alto (Producción) | **Esfuerzo**: Alto
 
 - Login de usuarios
@@ -81,7 +68,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-### 10. Reportes y Exportación
+### 6. Reportes y Exportación
 **Impacto**: Bajo | **Esfuerzo**: Medio
 
 - Exportar a Excel/CSV
@@ -93,7 +80,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-### 11. Funcionalidades Avanzadas
+### 7. Funcionalidades Avanzadas
 **Impacto**: Bajo | **Esfuerzo**: Alto
 
 - Sistema de notificaciones (contratos por vencer)
@@ -106,7 +93,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-### 12. Mejoras UX/UI
+### 8. Mejoras UX/UI
 **Impacto**: Bajo | **Esfuerzo**: Bajo-Medio
 
 - Confirmaciones antes de acciones importantes

@@ -5,6 +5,28 @@ from datetime import datetime
 from ..models import Contrato, Pago
 
 
+def obtener_estado_contrato(fecha_inicio: str, fecha_fin: str) -> str:
+    """Retorna el estado del contrato basado en las fechas"""
+    hoy = datetime.now().date().isoformat()
+
+    if hoy < fecha_inicio:
+        return "Futuro"
+    elif hoy > fecha_fin:
+        return "Vencido"
+    else:
+        return "Activo"
+
+
+def obtener_color_estado(estado: str) -> str:
+    """Retorna el color según el estado"""
+    if estado == "Activo":
+        return "green"
+    elif estado == "Vencido":
+        return "red"
+    else:  # Futuro
+        return "blue"
+
+
 class ContratoService:
     """Servicio para operaciones CRUD de Contratos"""
 

@@ -27,7 +27,7 @@ def mostrar_notificaciones() -> rx.Component:
             State.mensaje_exito != "",
             rx.callout.root(
                 rx.flex(
-                    rx.callout.icon(rx.icon("check-circle")),
+                    rx.callout.icon(rx.icon("circle-check")),
                     rx.callout.text(State.mensaje_exito),
                     rx.icon("x", on_click=State.cerrar_mensaje_exito, cursor="pointer"),
                     spacing="2",

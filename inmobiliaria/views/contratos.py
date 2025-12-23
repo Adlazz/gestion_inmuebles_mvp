@@ -1,5 +1,22 @@
 import reflex as rx
 from ..state import State
+from datetime import datetime
+
+
+def badge_estado_contrato(fecha_inicio: rx.Var, fecha_fin: rx.Var) -> rx.Component:
+    """Componente que muestra el badge de estado del contrato"""
+    hoy = datetime.now().date().isoformat()
+
+    # Determinar estado y color usando rx.cond
+    return rx.cond(
+        fecha_inicio > hoy,
+        rx.badge("Futuro", color_scheme="blue"),
+        rx.cond(
+            fecha_fin < hoy,
+            rx.badge("Vencido", color_scheme="red"),
+            rx.badge("Activo", color_scheme="green")
+        )
+    )
 
 
 def vista_contratos():
@@ -35,13 +52,15 @@ def vista_contratos():
             width="100%"
         ),
         rx.divider(),
-        rx.heading("Contratos Activos", size="3"),
+        rx.heading("Listado de Contratos", size="3"),
         rx.table.root(
             rx.table.header(
                 rx.table.row(
                     rx.table.column_header_cell("Inmueble"),
                     rx.table.column_header_cell("Inquilino"),
+                    rx.table.column_header_cell("Período"),
                     rx.table.column_header_cell("Monto"),
+                    rx.table.column_header_cell("Estado"),
                     rx.table.column_header_cell("Acciones")
                 )
             ),
@@ -51,7 +70,11 @@ def vista_contratos():
                     lambda c: rx.table.row(
                         rx.table.cell(c.inmueble.calle),
                         rx.table.cell(c.inquilino.apellido),
+                        rx.table.cell(c.fecha_inicio + " / " + c.fecha_fin),
                         rx.table.cell("$" + c.monto.to_string()),
+                        rx.table.cell(
+                            badge_estado_contrato(c.fecha_inicio, c.fecha_fin)
+                        ),
                         rx.table.cell(
                             rx.flex(
                                 rx.button("Editar", on_click=lambda: State.editar_contrato(c.id), size="1"),

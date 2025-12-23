@@ -116,3 +116,35 @@ class PropietarioService:
             select(Inmueble).where(Inmueble.propietario_id == id)
         ).all()
         return len(inmuebles) > 0, len(inmuebles)
+
+    @staticmethod
+    def tiene_inmuebles_con_contratos_activos(session: Session, id: int) -> tuple[bool, int, list]:
+        """
+        Verifica si un propietario tiene inmuebles con contratos activos.
+
+        Returns:
+            tuple[bool, int, list]: (tiene_contratos_activos, cantidad_total_contratos, inmuebles_con_contratos)
+        """
+        from ..models import Contrato
+        from datetime import datetime
+        from sqlalchemy.orm import selectinload
+
+        inmuebles = session.exec(
+            select(Inmueble)
+            .where(Inmueble.propietario_id == id)
+            .options(selectinload(Inmueble.contratos))
+        ).all()
+
+        contratos_activos = 0
+        inmuebles_con_contratos = []
+        hoy = datetime.now().date().isoformat()
+
+        for inmueble in inmuebles:
+            for contrato in inmueble.contratos:
+                # Verificar si el contrato está activo
+                if contrato.fecha_inicio <= hoy <= contrato.fecha_fin:
+                    contratos_activos += 1
+                    if inmueble not in inmuebles_con_contratos:
+                        inmuebles_con_contratos.append(inmueble)
+
+        return contratos_activos > 0, contratos_activos, inmuebles_con_contratos
