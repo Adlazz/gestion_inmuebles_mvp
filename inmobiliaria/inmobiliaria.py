@@ -8,6 +8,7 @@ from .views import (
     vista_contratos,
     vista_pagos,
 )
+from .components import mostrar_notificaciones
 
 def dialog_confirmar_eliminacion() -> rx.Component:
     """Diálogo de confirmación para eliminar registros"""
@@ -36,29 +37,33 @@ def dialog_confirmar_eliminacion() -> rx.Component:
         on_open_change=State.cerrar_dialog_eliminar
     )
 
-def mensaje_error() -> rx.Component:
-    """Componente para mostrar mensajes de error"""
+def indicador_carga() -> rx.Component:
+    """Indicador de carga global"""
     return rx.cond(
-        State.mensaje_error != "",
-        rx.callout.root(
+        State.cargando,
+        rx.box(
             rx.flex(
-                rx.callout.icon(rx.icon("triangle-alert")),
-                rx.callout.text(State.mensaje_error),
-                rx.icon("x", on_click=State.cerrar_mensaje_error, cursor="pointer"),
-                spacing="2",
-                align="center",
-                width="100%"
+                rx.spinner(size="3"),
+                rx.text("Cargando...", size="2"),
+                spacing="3",
+                align="center"
             ),
-            color_scheme="red",
-            role="alert",
-            margin_bottom="1em"
+            position="fixed",
+            top="20px",
+            right="20px",
+            background="white",
+            padding="1em",
+            border_radius="8px",
+            box_shadow="0 4px 6px rgba(0, 0, 0, 0.1)",
+            z_index="1000"
         )
     )
 
 def index() -> rx.Component:
     return rx.container(
         rx.heading("Sistema de Gestión Inmobiliaria", size="8", margin_bottom="1em"),
-        mensaje_error(),
+        mostrar_notificaciones(),
+        indicador_carga(),
         dialog_confirmar_eliminacion(),
         rx.tabs.root(
             rx.tabs.list(

@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
+from datetime import datetime
 from ..models import Contrato, Pago
 
 
@@ -95,3 +96,45 @@ class ContratoService:
             select(Pago).where(Pago.contrato_id == id)
         ).all()
         return len(pagos) > 0, len(pagos)
+
+    @staticmethod
+    def inmueble_tiene_contrato_activo(
+        session: Session,
+        inmueble_id: int,
+        fecha_inicio: str,
+        fecha_fin: str,
+        excluir_contrato_id: Optional[int] = None
+    ) -> tuple[bool, Optional[Contrato]]:
+        """
+        Verifica si un inmueble tiene un contrato activo que se solape con las fechas dadas.
+
+        Args:
+            session: Sesión de base de datos
+            inmueble_id: ID del inmueble a verificar
+            fecha_inicio: Fecha de inicio del nuevo contrato (formato YYYY-MM-DD)
+            fecha_fin: Fecha de fin del nuevo contrato (formato YYYY-MM-DD)
+            excluir_contrato_id: ID de contrato a excluir (para ediciones)
+
+        Returns:
+            tuple[bool, Optional[Contrato]]: (tiene_contrato_activo, contrato_conflictivo)
+        """
+        # Obtener todos los contratos del inmueble con sus relaciones
+        query = select(Contrato).where(Contrato.inmueble_id == inmueble_id).options(
+            selectinload(Contrato.inmueble),
+            selectinload(Contrato.inquilino)
+        )
+
+        # Excluir el contrato actual si estamos editando
+        if excluir_contrato_id:
+            query = query.where(Contrato.id != excluir_contrato_id)
+
+        contratos = session.exec(query).all()
+
+        # Verificar si hay solapamiento de fechas
+        for contrato in contratos:
+            # Verificar si las fechas se solapan
+            # Solapamiento: nuevo_inicio <= contrato_fin AND nuevo_fin >= contrato_inicio
+            if fecha_inicio <= contrato.fecha_fin and fecha_fin >= contrato.fecha_inicio:
+                return True, contrato
+
+        return False, None

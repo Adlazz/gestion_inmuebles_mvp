@@ -1,5 +1,6 @@
 from sqlmodel import Session, select
 from typing import List, Optional
+from sqlalchemy.exc import SQLAlchemyError
 from ..models import Propietario, Inmueble
 
 
@@ -15,16 +16,20 @@ class PropietarioService:
         email: str
     ) -> Propietario:
         """Crea un nuevo propietario"""
-        propietario = Propietario(
-            nombre=nombre,
-            apellido=apellido,
-            dni=dni,
-            email=email
-        )
-        session.add(propietario)
-        session.commit()
-        session.refresh(propietario)
-        return propietario
+        try:
+            propietario = Propietario(
+                nombre=nombre,
+                apellido=apellido,
+                dni=dni,
+                email=email
+            )
+            session.add(propietario)
+            session.commit()
+            session.refresh(propietario)
+            return propietario
+        except SQLAlchemyError as e:
+            session.rollback()
+            raise Exception(f"Error al crear propietario en la base de datos: {str(e)}")
 
     @staticmethod
     def obtener_todos(session: Session) -> List[Propietario]:
@@ -46,25 +51,34 @@ class PropietarioService:
         email: str
     ) -> Optional[Propietario]:
         """Actualiza un propietario existente"""
-        propietario = session.get(Propietario, id)
-        if propietario:
-            propietario.nombre = nombre
-            propietario.apellido = apellido
-            propietario.dni = dni
-            propietario.email = email
-            session.add(propietario)
-            session.commit()
-        return propietario
+        try:
+            propietario = session.get(Propietario, id)
+            if propietario:
+                propietario.nombre = nombre
+                propietario.apellido = apellido
+                propietario.dni = dni
+                propietario.email = email
+                session.add(propietario)
+                session.commit()
+                session.refresh(propietario)
+            return propietario
+        except SQLAlchemyError as e:
+            session.rollback()
+            raise Exception(f"Error al actualizar propietario en la base de datos: {str(e)}")
 
     @staticmethod
     def eliminar(session: Session, id: int) -> bool:
         """Elimina un propietario"""
-        propietario = session.get(Propietario, id)
-        if propietario:
-            session.delete(propietario)
-            session.commit()
-            return True
-        return False
+        try:
+            propietario = session.get(Propietario, id)
+            if propietario:
+                session.delete(propietario)
+                session.commit()
+                return True
+            return False
+        except SQLAlchemyError as e:
+            session.rollback()
+            raise Exception(f"Error al eliminar propietario en la base de datos: {str(e)}")
 
     @staticmethod
     def buscar_por_dni(
