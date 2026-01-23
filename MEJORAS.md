@@ -16,6 +16,7 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 - ✅ Indicador de carga global
 - ✅ Restricción: 1 contrato activo por inmueble
 - ✅ Validación de montos de pago con advertencias
+- ✅ **Vista de Detalle de Propietarios** (PRIORIDAD 1 completada)
 
 **Datos de prueba**:
 - 20 propietarios (algunos con múltiples inmuebles)
@@ -26,29 +27,34 @@ Resumen ejecutivo de mejoras sugeridas para evolucionar el MVP actual hacia un s
 
 ---
 
-## PRIORIDAD 1 - Vista de Detalle de Propietarios 👤
+## ✅ PRIORIDAD 1 - Vista de Detalle de Propietarios 👤 - COMPLETADA
 **Impacto**: Alto | **Esfuerzo**: Medio | **Prioridad**: INMEDIATA
 
 **Objetivo**: Crear una vista detallada para cada propietario que muestre toda su información y actividad
 
-**Funcionalidades**:
-- Ver datos completos del propietario (nombre, apellido, DNI, email, teléfono)
-- Lista de todos sus inmuebles con estado (alquilado/disponible)
-- Estadísticas del propietario:
-  - Total de inmuebles
-  - Inmuebles alquilados vs disponibles
-  - Ingresos totales recibidos
-  - Ingresos del mes actual
-  - Promedio de ingresos mensuales
-- Historial de pagos recibidos (filtrable por inmueble/período)
-- Inquilinos morosos (pagos atrasados por inmueble)
-- Contratos activos y próximos a vencer
+**Funcionalidades implementadas**:
+- ✅ Ver datos completos del propietario (nombre, apellido, DNI, email)
+- ✅ Lista de todos sus inmuebles con estado (alquilado/disponible)
+- ✅ Estadísticas del propietario:
+  - ✅ Total de inmuebles
+  - ✅ Inmuebles alquilados vs disponibles
+  - ✅ Ingresos totales recibidos
+  - ✅ Ingresos del mes actual
+  - ✅ Promedio de ingresos mensuales
+  - ✅ Contratos activos
+  - ✅ Contratos próximos a vencer (30 días)
+- ✅ Historial de pagos recibidos (últimos 20, ordenados por fecha)
+- ✅ Inquilinos actuales por inmueble
+- ✅ Monto de contrato por cada inmueble alquilado
 
-**Implementación sugerida**:
-1. Crear nuevo componente `vista_detalle_propietario.py` en `views/`
-2. Agregar botón "Ver detalle" en tabla de propietarios
-3. Usar un Dialog o nueva página con tabs para organizar la información
-4. Crear services auxiliares para cálculos de estadísticas
+**Implementación realizada**:
+1. ✅ Creado componente `vista_detalle_propietario.py` en `views/`
+2. ✅ Agregado botón "Ver detalle" en tabla de propietarios
+3. ✅ Dialog con tabs para organizar la información (Estadísticas, Inmuebles, Pagos)
+4. ✅ Creados services auxiliares en PropietarioService:
+   - `obtener_estadisticas()` - Cálculo completo de estadísticas
+   - `obtener_inmuebles_con_detalles()` - Inmuebles con estado e inquilino actual
+   - `obtener_pagos_recibidos()` - Historial de pagos ordenado
 
 **Beneficio**: Visibilidad completa de la actividad de cada propietario, facilita gestión y toma de decisiones
 

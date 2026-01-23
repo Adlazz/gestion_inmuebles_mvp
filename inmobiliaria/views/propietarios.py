@@ -47,6 +47,7 @@ def vista_propietarios():
                         rx.table.cell(p.dni),
                         rx.table.cell(
                             rx.flex(
+                                rx.button("Ver detalle", on_click=lambda: State.abrir_detalle_propietario(p.id), size="1", variant="soft"),
                                 rx.button("Editar", on_click=lambda: State.editar_propietario(p.id), size="1"),
                                 rx.button("Eliminar", on_click=lambda: State.abrir_dialog_eliminar("propietario", p.id), size="1", color_scheme="red"),
                                 spacing="2"

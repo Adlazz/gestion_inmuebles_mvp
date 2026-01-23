@@ -7,6 +7,7 @@ from .views import (
     vista_inquilinos,
     vista_contratos,
     vista_pagos,
+    vista_detalle_propietario,
 )
 from .components import mostrar_notificaciones
 
@@ -65,6 +66,7 @@ def index() -> rx.Component:
         mostrar_notificaciones(),
         indicador_carga(),
         dialog_confirmar_eliminacion(),
+        vista_detalle_propietario(),
         rx.tabs.root(
             rx.tabs.list(
                 rx.tabs.trigger("Inicio", value="tab0"),

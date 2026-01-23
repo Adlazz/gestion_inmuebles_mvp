@@ -1,5 +1,5 @@
 import reflex as rx
-from typing import List
+from typing import List, TypedDict
 from sqlmodel import select, func
 from sqlalchemy.exc import IntegrityError
 from .models import Propietario, Inmueble, Inquilino, Contrato, Pago
@@ -11,6 +11,24 @@ from .services import (
     ContratoService,
     PagoService
 )
+
+
+class InmuebleDetalle(TypedDict):
+    """Tipo para los detalles de inmueble sin referencias circulares"""
+    calle: str
+    altura: str
+    barrio: str
+    localidad: str
+    cp: str
+
+
+class PagoDetalle(TypedDict):
+    """Tipo para los detalles de pago sin referencias circulares"""
+    fecha: str
+    periodo: str
+    monto: float
+    inmueble_direccion: str
+    inquilino_nombre: str
 
 
 class State(rx.State):
@@ -75,6 +93,16 @@ class State(rx.State):
     tipo_entidad_eliminar: str = ""
     id_entidad_eliminar: int = 0
     cargando: bool = False
+
+    # --- VARIABLES PARA DETALLE DE PROPIETARIO ---
+    mostrar_detalle_propietario: bool = False
+    detalle_prop_nombre: str = ""
+    detalle_prop_apellido: str = ""
+    detalle_prop_dni: str = ""
+    detalle_prop_email: str = ""
+    detalle_prop_inmuebles: List[InmuebleDetalle] = []
+    estadisticas_propietario: dict = {}
+    detalle_prop_pagos: List[PagoDetalle] = []
 
     # --- SETTERS EXPLÍCITOS ---
     def set_form_prop_nombre(self, value: str):
@@ -792,3 +820,67 @@ class State(rx.State):
             self.eliminar_contrato(self.id_entidad_eliminar)
         elif self.tipo_entidad_eliminar == "pago":
             self.eliminar_pago(self.id_entidad_eliminar)
+
+    # --- DETALLE DE PROPIETARIO ---
+    def abrir_detalle_propietario(self, prop_id: int):
+        """Abre el diálogo de detalle de un propietario"""
+        try:
+            self.cargando = True
+            with rx.session() as session:
+                # Obtener el propietario con sus inmuebles
+                propietario = PropietarioService.obtener_por_id_con_relaciones(session, prop_id)
+
+                if not propietario:
+                    self.mostrar_error("Propietario no encontrado")
+                    return
+
+                # Guardar datos del propietario (sin referencias circulares)
+                self.detalle_prop_nombre = propietario.nombre
+                self.detalle_prop_apellido = propietario.apellido
+                self.detalle_prop_dni = propietario.dni
+                self.detalle_prop_email = propietario.email
+
+                # Convertir inmuebles a dict para evitar referencias circulares
+                self.detalle_prop_inmuebles = [
+                    {
+                        "calle": inm.calle,
+                        "altura": inm.altura,
+                        "barrio": inm.barrio,
+                        "localidad": inm.localidad,
+                        "cp": inm.cp
+                    }
+                    for inm in propietario.inmuebles
+                ]
+
+                # Obtener estadísticas
+                self.estadisticas_propietario = PropietarioService.obtener_estadisticas(session, prop_id)
+
+                # Obtener pagos recibidos y convertir a dict
+                pagos = PropietarioService.obtener_pagos_recibidos(session, prop_id)
+                self.detalle_prop_pagos = [
+                    {
+                        "fecha": pago.fecha,
+                        "periodo": pago.periodo,
+                        "monto": pago.monto,
+                        "inmueble_direccion": f"{pago.contrato.inmueble.calle} {pago.contrato.inmueble.altura}",
+                        "inquilino_nombre": f"{pago.contrato.inquilino.nombre} {pago.contrato.inquilino.apellido}"
+                    }
+                    for pago in pagos[:20]  # Limitar a 20 pagos
+                ]
+
+                self.mostrar_detalle_propietario = True
+        except Exception as e:
+            self.mostrar_error(f"Error al cargar detalle del propietario: {str(e)}")
+        finally:
+            self.cargando = False
+
+    def cerrar_detalle_propietario(self):
+        """Cierra el diálogo de detalle de propietario"""
+        self.mostrar_detalle_propietario = False
+        self.detalle_prop_nombre = ""
+        self.detalle_prop_apellido = ""
+        self.detalle_prop_dni = ""
+        self.detalle_prop_email = ""
+        self.detalle_prop_inmuebles = []
+        self.estadisticas_propietario = {}
+        self.detalle_prop_pagos = []
